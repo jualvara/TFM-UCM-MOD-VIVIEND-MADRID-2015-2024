@@ -1,102 +1,47 @@
-# Auto instalación de pandas si no está (solo para debugging en entornos con problemas)
-try:
-    import pandas as pd
-except ImportError:
-    import os
-    os.system("pip install pandas")
-    import pandas as pd
-
-
-
-
 import streamlit as st
+import pandas as pd
 import joblib
-import numpy as np
-import os
-import subprocess
 
+# Cargar modelo entrenado
+model = joblib.load("modelo_precio.pkl")
 
-MODELO_PATH = "modelo_precio.pkl"
-CATALOGO_PATH = "catalogo_distritos_barrios.csv"
+# Cargar catálogo ligero
+catalogo = pd.read_csv("catalogo_distritos_barrios.csv")
 
-# ─────────────────────────────────────────────
-# 1. Ejecutar entrenamiento.py si no existe el modelo
-if not os.path.exists(MODELO_PATH):
-    st.warning("🔄 Entrenando modelo por primera vez...")
-    result = subprocess.run(["python", "entrenamiento.py"], capture_output=True, text=True)
-    if result.returncode != 0:
-        st.error("❌ Error al entrenar el modelo:")
-        st.code(result.stderr)
-        st.stop()
-    else:
-        st.success("✅ Modelo entrenado correctamente.")
+st.title("Predicción del Precio de Vivienda en Madrid 🏠")
+st.markdown("Aplicación de prueba usando modelo entrenado (TFM 2013–2024).")
 
-# ─────────────────────────────────────────────
-# 2. Cargar modelo y catálogo
+# Selector de distrito
+distrito = st.selectbox("Distrito", catalogo["DISTRITO_x"].unique())
 
-@st.cache_resource
-def cargar_modelo():
-    return joblib.load(MODELO_PATH)
+# Filtrar barrios dinámicamente
+barrios_distrito = catalogo[catalogo["DISTRITO_x"] == distrito]["BARRIO"].unique()
+barrio = st.selectbox("Barrio", barrios_distrito)
 
-@st.cache_data
-def cargar_catalogo():
-    return pd.read_csv(CATALOGO_PATH)
+# Tipo de vivienda
+tipo_vivienda = st.selectbox("Tipo de vivienda", ["Piso", "Chalet", "Estudio", "Otro"])
 
-st.title("🏡 Predicción del Precio de Vivienda en Madrid")
+# Variables numéricas
+superficie = st.number_input("Superficie (m²)", 20, 300, 80)
+antiguedad = st.slider("Antigüedad (años)", 0, 100, 30)
+renta = st.number_input("Renta media distrital (€)", 500, 6000, 2500)
+paro = st.slider("Tasa de paro (%)", 0, 40, 10)
+zonas_verdes = st.number_input("Zonas verdes por habitante (m²)", 0, 100, 20)
 
-modelo = cargar_modelo()
-catalogo = cargar_catalogo()
+# Construir DataFrame de entrada
+data = pd.DataFrame({
+    "DISTRITO_x": [distrito],
+    "BARRIO": [barrio],
+    "TIPO_VIVIENDA": [tipo_vivienda],
+    "superficie": [superficie],
+    "antiguedad": [antiguedad],
+    "renta": [renta],
+    "paro": [paro],
+    "zonas_verdes": [zonas_verdes]
+})
 
-# ─────────────────────────────────────────────
-# 3. Selectores dinámicos
+# Predicción
+if st.button("Predecir Precio"):
+    pred = model.predict(data)[0]
+    st.success(f"El precio estimado es: **{pred:,.0f} €/m²**")
 
-distrito = st.selectbox("Selecciona un distrito", catalogo["DISTRITO_x"].unique())
-barrios_filtrados = catalogo[catalogo["DISTRITO_x"] == distrito]["BARRIO"].unique()
-barrio = st.selectbox("Selecciona un barrio", barrios_filtrados)
-tipo_vivienda = st.selectbox("Tipo de vivienda", ["NUEVA", "SEGUNDA MANO"])
-
-st.markdown("---")
-
-# ─────────────────────────────────────────────
-# 4. Entradas adicionales
-
-st.subheader("📊 Introduce variables adicionales:")
-transacciones = st.number_input("Transacciones", min_value=0, value=50)
-renta_neta_persona = st.number_input("Renta neta por persona (€)", min_value=0, value=20000)
-renta_neta_hogar = st.number_input("Renta neta por hogar (€)", min_value=0, value=40000)
-viviendas_turisticas = st.number_input("Viviendas turísticas reales", min_value=0, value=100)
-paro = st.number_input("Tasa de paro (%)", min_value=0.0, value=7.0)
-seguridad = st.slider("Percepción de seguridad (1-10)", min_value=1.0, max_value=10.0, value=7.5)
-satisfaccion = st.slider("Satisfacción en el barrio (1-10)", min_value=1.0, max_value=10.0, value=7.0)
-
-# ─────────────────────────────────────────────
-# 5. Predicción
-
-if st.button("📈 Predecir precio por m²"):
-    entrada = pd.DataFrame([{
-        "DISTRITO_x": distrito,
-        "BARRIO": barrio,
-        "TIPO_VIVIENDA": tipo_vivienda,
-        "TRANSACCIONES_x": transacciones,
-        "RENTA_NETA_PERSONA_x": renta_neta_persona,
-        "RENTA_NETA_HOGAR_x": renta_neta_hogar,
-        "VIVIENDAS_TURISTICAS_REAL_x": viviendas_turisticas,
-        "Tasa absoluta de paro registrado (febrero)": paro,
-        "Percepción de seguridad en el barrio (media) (Robusto 1-10)": seguridad,
-        "Satisfacción de la vida en el barrio (media) (Robusto 1-10)": satisfaccion
-    }])
-
-    prediccion = modelo.predict(entrada)[0]
-    st.success(f"💶 Precio estimado: **{prediccion:,.2f} €/m²**")
-
-# ─────────────────────────────────────────────
-# 6. Botón para descargar modelo generado
-
-if os.path.exists(MODELO_PATH):
-    with open(MODELO_PATH, "rb") as f:
-        st.download_button(
-            label="⬇️ Descargar modelo entrenado (.pkl)",
-            data=f,
-            file_name="modelo_precio.pkl",
-            mime="application/octet-stream"
-        )
