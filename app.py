@@ -6,7 +6,7 @@ import numpy as np
 # Cargar modelo
 @st.cache_resource
 def cargar_modelo():
-    return joblib.load("modelo_precio_moderno.pkl")
+    return joblib.load("modelo_precio.pkl")
 
 # Cargar catálogo de distritos y barrios
 @st.cache_data
