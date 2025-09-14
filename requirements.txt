@@ -8,3 +8,4 @@ pydeck
 rich
 markdown-it-py==3.0.0
 pygments
+matplotlib==3.9.2
