@@ -6,6 +6,15 @@ except ImportError:
     os.system("pip install pandas")
     import pandas as pd
 
+try:
+    import sklearn
+except ImportError:
+    import os
+    os.system("pip install sklearn")
+    import sklearn
+
+
+
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
