@@ -1,13 +1,7 @@
-# Auto instalación de pandas si no está (solo para debugging en entornos con problemas)
-try:
-    import pandas as pd
-except ImportError:
-    import os
-    os.system("pip install pandas")
+!pip install pandas
     import pandas as pd
 
 
-import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
