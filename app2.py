@@ -1,8 +1,11 @@
 import streamlit as st
 import pandas as pd
 import joblib
+import sys
+import numpy as np
+import sklearn
+import openpyxl
 import json
-import pydeck as pdk
 
 # -------------------------------
 # Cargar modelo cacheado
@@ -35,11 +38,6 @@ with open("columns.json", "r") as f:
 st.title("Predicción del Precio de Vivienda en Madrid 🏠")
 st.markdown("Aplicación de prueba usando modelo entrenado (TFM 2013–2024).")
 
-# -------------------------------
-# Inputs para predicción
-# -------------------------------
-st.header("1️⃣ Calculadora de precio de vivienda")
-
 # Selector de distrito
 distrito = st.selectbox("Distrito", catalogo["DISTRITO_x"].unique())
 
@@ -57,9 +55,13 @@ renta = st.number_input("Renta media distrital (€)", 500, 6000, 2500)
 paro = st.slider("Tasa de paro (%)", 0, 40, 10)
 zonas_verdes = st.number_input("Zonas verdes por habitante (m²)", 0, 100, 20)
 
+# -------------------------------
 # Construir DataFrame con todas las columnas esperadas
+# -------------------------------
 data = pd.DataFrame(columns=expected_cols)
 data.loc[0] = 0  # inicializar en cero
+
+# Rellenar con inputs del usuario
 data.loc[0, "DISTRITO_x"] = distrito
 data.loc[0, "BARRIO"] = barrio
 data.loc[0, "TIPO_VIVIENDA"] = tipo_vivienda
@@ -69,36 +71,10 @@ data.loc[0, "renta"] = renta
 data.loc[0, "paro"] = paro
 data.loc[0, "zonas_verdes"] = zonas_verdes
 
+# -------------------------------
 # Predicción
+# -------------------------------
 if st.button("Predecir Precio"):
     with st.spinner("Calculando predicción... 🔮"):
         pred = model.predict(data)[0]
     st.success(f"El precio estimado es: **{pred:,.0f} €/m²**")
-
-# -------------------------------
-# Mapa de distritos
-# -------------------------------
-st.header("2️⃣ Mapa interactivo de distritos de Madrid")
-
-# Cargar coordenadas de distritos
-coords = pd.read_csv("distritos_madrid_coords.csv")
-
-# Capa de puntos
-layer = pdk.Layer(
-    "ScatterplotLayer",
-    coords,
-    get_position=["Longitud", "Latitud"],
-    get_radius=400,
-    get_color=[255, 0, 0, 160],
-    pickable=True
-)
-
-# Vista inicial del mapa
-view_state = pdk.ViewState(latitude=40.4168, longitude=-3.7038, zoom=11)
-
-# Renderizar
-st.pydeck_chart(pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip={"text": "{Distrito}"}))
-
-# Mostrar tabla de referencia
-with st.expander("📋 Ver datos de distritos"):
-    st.dataframe(coords)
