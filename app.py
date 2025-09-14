@@ -1,9 +1,20 @@
+# Auto instalación de pandas si no está (solo para debugging en entornos con problemas)
+try:
+    import pandas as pd
+except ImportError:
+    import os
+    os.system("pip install pandas")
+    import pandas as pd
+
+
+
+
 import streamlit as st
-import pandas as pd
 import joblib
 import numpy as np
 import os
 import subprocess
+
 
 MODELO_PATH = "modelo_precio.pkl"
 CATALOGO_PATH = "catalogo_distritos_barrios.csv"
